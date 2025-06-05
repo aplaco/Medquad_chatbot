@@ -36,7 +36,7 @@ alpaca_prompt = """Below is an instruction that describes a task. Write a respon
 ### Response:
 {}"""
 
-from transformers import TextStreamer  # 텍스트 스트리밍을 위한 TextStreamer 임포트
+
 
 
 @app.post("/", response_class=HTMLResponse)
@@ -44,26 +44,8 @@ async def post_chat(request: Request, user_input: str = Form(...)):
     # 사용자 입력 저장
     chat_history.append({"user": user_input, "bot": None})
     print(f"User input: {user_input}")
-    # # 토큰화
-    # inputs = tokenizer(user_input, return_tensors="pt").to(device)
-    # print(f"inputs: {inputs}")
-    # # 모델 추론
-    # with torch.no_grad():
-    #     outputs = model.generate(
-    #         **inputs,
-    #         max_new_tokens=2048,
-    #         do_sample=True,
-    #         temperature=0.3,
-    #         top_p=0.95,
-    #         pad_token_id=tokenizer.eos_token_id,
-    #     )
 
-    # # 응답 디코딩 및 사용자 입력 이후 부분만 추출
-    # generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    # print(f"Generated text: {generated_text}")
-    # answer = generated_text[len(user_input):].strip()
-    
-    
+        
     # 추론을 위한 입력 준비
     inputs = tokenizer(
     [
@@ -73,14 +55,18 @@ async def post_chat(request: Request, user_input: str = Form(...)):
         )
     ], return_tensors = "pt").to("cuda")  # 텐서를 PyTorch 형식으로 변환하고 GPU로 이동
 
+    from transformers import TextStreamer  # 텍스트 스트리밍을 위한 TextStreamer 임포트
 
     text_streamer = TextStreamer(tokenizer)  # 토크나이저를 사용하여 스트리머 초기화
 
     # 모델을 사용하여 텍스트 생성 및 스트리밍 출력
     _ = model.generate(**inputs, streamer = text_streamer, max_new_tokens = 128)  # 최대 128개의 새로운 토큰 생성
+    
     generated_text = tokenizer.decode(_[0], skip_special_tokens=True)
     answer = generated_text.split("### Response:")[1].strip()
+    
     print(f"Answer: {answer}")
+    
     # 마지막 대화에 응답 추가
     chat_history[-1]["bot"] = answer
 
